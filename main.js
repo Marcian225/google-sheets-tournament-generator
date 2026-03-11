@@ -1,49 +1,77 @@
 
-function onOpen(){
-  var ui = SpreadsheetApp.getUi()
-  ui.createMenu("Tests")
-    .addItem("Generate Groups2", "generate2Groups")
-    .addItem("Generate Groups4", "generate4Groups")
-    .addItem("Generate Schedule2", "generateSchedules2")
-    .addItem("Generate Schedule4", "generateSchedules4")
-    .addToUi()
+
+// Entry point that adds a custom menu to the spreadsheet
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu("🏆 Tournament Menu")
+    .addItem("1. Generate Groups", "uiGenerateGroups")
+    .addItem("2. Generate Schedules", "uiGenerateSchedules")
+    .addToUi();
 }
 
-function generate2Groups(){
-  testTournamentGroups(2);
-}
-
-function generate4Groups(){
-  testTournamentGroups(4);
-}
-
-function generateSchedules2(){
-  generateSchedules(2);
-}
-
-function generateSchedules4(){
-  generateSchedules(4);
-}
-
-function makeLogs(){
-  console.log("HALO")
-  logPlayers()
-}
-
-function getSingleDebil(){
-  let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("debil")
-  let value = sheet.getRange(1,1).getValue()
-}
-
-function logDataRange() {
-  let sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("debil")
-  let range = sheet.getRange(2,2,5)
-  let data = range.getValues()
-  Logger.log(data)
-
-  for (let i = 0 ; i < data.length; i++){
-    data[i] = data[i]*2
-    // Logger.log(data[i])
+function uiGenerateGroups() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt('Generate Groups', 'How many groups do you want to create?', ui.ButtonSet.OK_CANCEL);
+  
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const numGroups = parseInt(response.getResponseText());
+    if (isNaN(numGroups) || numGroups <= 0) {
+      ui.alert('Please enter a valid number.');
+      return;
+    }
+    
+    try {
+      // groupsGenerator.js exports this function
+      generateTournamentGroups('Lista Zawodników', 'B3', 'Turniej', numGroups);
+      SpreadsheetApp.flush();
+      ui.alert(`✅ Successfully generated ${numGroups} groups!`);
+    } catch (e) {
+      ui.alert(`❌ Error: ${e.message}`);
+    }
   }
-  Logger.log(data)
+}
+
+function uiGenerateSchedules() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt('Generate Schedules', 'How many groups need schedules?', ui.ButtonSet.OK_CANCEL);
+  
+  if (response.getSelectedButton() == ui.Button.OK) {
+    const numGroups = parseInt(response.getResponseText());
+    if (isNaN(numGroups) || numGroups <= 0) return;
+    
+    try {
+      generateSchedules(numGroups); // from scheduleGenerator.js
+      SpreadsheetApp.flush();
+      ui.alert(`✅ Schedules generated!`);
+    } catch (e) {
+      ui.alert(`❌ Error: ${e.message}`);
+    }
+  }
+}
+
+/**
+ * Read names from a column, starting at startRow/startCol and
+ * stopping when an empty cell is encountered.
+ *
+ * @param {Sheet} sheet          Google Sheets sheet object
+ * @param {number} startRow      one‑based row index
+ * @param {number} startCol      one‑based column index
+ * @returns {string[]}           list of trimmed, non‑empty names
+ */
+
+function getPlayerNamesFromStartCell(sheet, startRow, startCol) {
+  const maxRows = sheet.getMaxRows();
+  if (startRow > maxRows) return [];
+  
+  const values = sheet.getRange(startRow, startCol, maxRows - startRow + 1, 1).getValues();
+  const players = [];
+  
+  for (let i = 0; i < values.length; i++) {
+    const val = values[i][0];
+    if (val === null || val === undefined || val === '') break; 
+    const strVal = val.toString().trim();
+    if (strVal === '') break;
+    players.push(strVal);
+  }
+  return players;
 }
